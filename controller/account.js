@@ -73,7 +73,7 @@ async function verificationCode(req, res) {
         });
     };
 
-    const eatery = await Eatery.findById(decoded.id);
+    let eatery = await Eatery.findById(decoded.id);
 
     if (!eatery) {
         return res.status(400).json({
@@ -153,7 +153,53 @@ async function verificationEmail(req, res) {
 };
 
 async function login(req, res) {
+    const { email, password } = req.body;
 
+    if (!email || !password) {
+        let errors = new Object();
+        if (!Boolean(username)) {
+            errors.email = 'Please enter an email address';
+        };
+
+        if (!Boolean(password)) {
+            errors.password = 'Please enter a password';
+        };
+
+        return res.status(400).json({
+            errors
+        });
+    };
+
+    const eatery = await Eatery.findOne({ email });
+
+    if (!eatery) {
+        return res.status(400).json({
+            errors: {
+                email: 'Account not found with this email address'
+            }
+        });
+    };
+
+    if (!eatery.verification.status) {
+        return res.status(400).json({
+            message: 'Eatery not verified'
+        });
+    };
+
+    const isMatchPassword = await bcrypt.compare(password, eatery.password);
+
+    if (!isMatchPassword) {
+        return res.status(400).json({
+            errors: {
+                password: 'Password is incorrect'
+            }
+        });
+    };
+
+    const token = loginToken(eatery._id);
+
+    res.cookie('token', token);
+    res.status(200).json({});
 };
 
 async function logout(req, res) {
